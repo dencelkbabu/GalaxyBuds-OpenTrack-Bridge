@@ -37,18 +37,48 @@ public class BluetoothHeadTrackingManager : IDisposable
         {
             Console.WriteLine("[INFO] Connecting to Galaxy Buds...");
             
+            // Diagnostic logging
+            Console.WriteLine($"[DEBUG] Settings path: {GalaxyBudsClient.Platform.PlatformUtils.CombineDataPath("settings.json")}");
+            Console.WriteLine($"[DEBUG] HasValidDevice: {BluetoothImpl.HasValidDevice}");
+            Console.WriteLine($"[DEBUG] Device count: {GalaxyBudsClient.Model.Config.Settings.Data.Devices.Count}");
+            
+            if (GalaxyBudsClient.Model.Config.Settings.Data.Devices.Count > 0)
+            {
+                var device = GalaxyBudsClient.Model.Config.Settings.Data.Devices[0];
+                Console.WriteLine($"[DEBUG] Device found: {device.Name} ({device.MacAddress}) - Model: {device.Model}");
+            }
+            
             if (!BluetoothImpl.HasValidDevice)
             {
                 Error?.Invoke(this, "No registered Galaxy Buds device found. Please pair your buds using GalaxyBudsClient first.");
                 return false;
             }
             
+            Console.WriteLine("[DEBUG] Calling BluetoothImpl.ConnectAsync()...");
             var result = await _bluetooth.ConnectAsync();
+            Console.WriteLine($"[DEBUG] ConnectAsync returned: {result}");
             return result;
+        }
+        catch (BluetoothException ex)
+        {
+            Console.WriteLine($"[ERROR] BluetoothException caught:");
+            Console.WriteLine($"[ERROR]   ErrorCode: {ex.ErrorCode}");
+            Console.WriteLine($"[ERROR]   Message: {ex.Message}");
+            Console.WriteLine($"[ERROR]   ErrorMessage: {ex.ErrorMessage}");
+            Console.WriteLine($"[ERROR]   StackTrace: {ex.StackTrace}");
+            if (ex.InnerException != null)
+            {
+                Console.WriteLine($"[ERROR]   InnerException: {ex.InnerException.Message}");
+                Console.WriteLine($"[ERROR]   InnerException StackTrace: {ex.InnerException.StackTrace}");
+            }
+            Error?.Invoke(this, $"Connection failed: {ex.Message}");
+            return false;
         }
         catch (Exception ex)
         {
             Error?.Invoke(this, $"Connection failed: {ex.Message}");
+            Console.WriteLine($"[DEBUG] Exception type: {ex.GetType().FullName}");
+            Console.WriteLine($"[DEBUG] Exception: {ex}");
             return false;
         }
     }
