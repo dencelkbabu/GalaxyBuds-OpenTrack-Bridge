@@ -152,12 +152,14 @@ public class MainWindow : Window
             _consoleText.AppendLine(text);
             _consoleOutput.Text = _consoleText.ToString();
             
-            // Auto-scroll logic
-            if (_consoleOutput.Parent is ScrollViewer sv)
+            // Post moving to end to allow layout cycle to complete and update extent
+            Dispatcher.UIThread.Post(() => 
             {
-                // Force layout update so the new extent is calculated before scrolling
-                sv.ScrollToEnd();
-            }
+                if (_consoleOutput.Parent is ScrollViewer sv)
+                {
+                    sv.ScrollToEnd();
+                }
+            }, DispatcherPriority.Background);
         });
     }
 
