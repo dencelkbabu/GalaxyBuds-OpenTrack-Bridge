@@ -1,0 +1,3 @@
+[submodule "GalaxyBudsClient"]
+	path = GalaxyBudsClient
+	url = https://github.com/timschneeb/GalaxyBudsClient.git
