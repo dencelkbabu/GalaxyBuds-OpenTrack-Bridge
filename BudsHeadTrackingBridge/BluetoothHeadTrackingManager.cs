@@ -53,6 +53,27 @@ public class BluetoothHeadTrackingManager : IDisposable
                 {
                     var device = GalaxyBudsClient.Model.Config.Settings.Data.Devices[0];
                     Console.WriteLine($"[DEBUG] Device found: {device.Name} ({device.MacAddress}) - Model: {device.Model}");
+                    
+                    // Wait for the device to be discovered by the background watcher
+                    // The library's background watcher consumes time to find the device.
+                    // If we call ConnectAsync too early, it fails because the cache is empty.
+                    var discovered = false;
+                    for (int check = 0; check < 10; check++) // Try for up to 2 seconds (10 * 200ms)
+                    {
+                        var devices = await _bluetooth.GetDevicesAsync();
+                        if (devices.Any(d => d.Address == device.MacAddress))
+                        {
+                            discovered = true;
+                            Console.WriteLine("[DEBUG] Device discovered in Bluetooth scan.");
+                            break;
+                        }
+                        await Task.Delay(200);
+                    }
+                    
+                    if (!discovered)
+                    {
+                        Console.WriteLine("[WARNING] Device not yet discovered in scan, attempting connection anyway...");
+                    }
                 }
                 
                 if (!BluetoothImpl.HasValidDevice)
