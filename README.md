@@ -155,8 +155,11 @@ Example: `45.20,-12.30,5.10,0,0,0\n`
 
 ## Credits
 
-- **GalaxyBudsClient** by [@timschneeb](https://github.com/timschneeb) - Reverse-engineered Samsung protocol
+- **GalaxyBudsClient** by [@timschneeb](https://github.com/timschneeb) - Original reverse-engineered Samsung protocol
 - **OpenTrack** - Universal head-tracking solution
+
+## Development
+This project was vibe coded using **Antigravity** powered by **Gemini 3 Pro** and **Claude Sonnet 4.5**.
 
 ## License
 
