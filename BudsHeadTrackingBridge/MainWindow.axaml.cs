@@ -82,7 +82,8 @@ public class MainWindow : Window
         Content = mainPanel;
         
         // Redirect console output to window
-        var writer = new WindowConsoleWriter(this);
+        var originalOut = Console.Out;
+        var writer = new WindowConsoleWriter(this, originalOut);
         Console.SetOut(writer);
         
         // Show welcome message
@@ -276,19 +277,23 @@ public class MainWindow : Window
 public class WindowConsoleWriter : System.IO.TextWriter
 {
     private readonly MainWindow _window;
+    private readonly System.IO.TextWriter _originalOut;
 
-    public WindowConsoleWriter(MainWindow window)
+    public WindowConsoleWriter(MainWindow window, System.IO.TextWriter originalOut)
     {
         _window = window;
+        _originalOut = originalOut;
     }
 
     public override void WriteLine(string? value)
     {
+        _originalOut.WriteLine(value);
         _window.AppendText(value ?? string.Empty);
     }
 
     public override void Write(string? value)
     {
+        _originalOut.Write(value);
         _window.AppendText(value ?? string.Empty);
     }
 
