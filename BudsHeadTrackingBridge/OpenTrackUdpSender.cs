@@ -39,10 +39,22 @@ public class OpenTrackUdpSender : IDisposable
 
         try
         {
-            // OpenTrack UDP format: "yaw,pitch,roll,x,y,z\n"
-            // We only send rotation data (x,y,z = 0)
-            var message = $"{pose.Yaw:F2},{pose.Pitch:F2},{pose.Roll:F2},0,0,0\n";
-            var data = Encoding.ASCII.GetBytes(message);
+            // OpenTrack UDP protocol: 6 IEEE double-precision floats (little-endian)
+            // Order: X, Y, Z, Yaw, Pitch, Roll
+            // Total: 6 * 8 bytes = 48 bytes per packet
+            
+            var data = new byte[48]; // 6 doubles * 8 bytes each
+            var offset = 0;
+            
+            // Position (X, Y, Z) - we send 0 for head-tracking only
+            Buffer.BlockCopy(BitConverter.GetBytes((double)0.0), 0, data, offset, 8); offset += 8; // X
+            Buffer.BlockCopy(BitConverter.GetBytes((double)0.0), 0, data, offset, 8); offset += 8; // Y
+            Buffer.BlockCopy(BitConverter.GetBytes((double)0.0), 0, data, offset, 8); offset += 8; // Z
+            
+            // Rotation (Yaw, Pitch, Roll) - in degrees
+            Buffer.BlockCopy(BitConverter.GetBytes((double)pose.Yaw), 0, data, offset, 8); offset += 8;
+            Buffer.BlockCopy(BitConverter.GetBytes((double)pose.Pitch), 0, data, offset, 8); offset += 8;
+            Buffer.BlockCopy(BitConverter.GetBytes((double)pose.Roll), 0, data, offset, 8);
 
             _udpClient.Send(data, data.Length, _endpoint);
 
