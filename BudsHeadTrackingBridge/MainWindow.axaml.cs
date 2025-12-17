@@ -155,6 +155,7 @@ public class MainWindow : Window
             // Auto-scroll logic
             if (_consoleOutput.Parent is ScrollViewer sv)
             {
+                // Force layout update so the new extent is calculated before scrolling
                 sv.ScrollToEnd();
             }
         });
