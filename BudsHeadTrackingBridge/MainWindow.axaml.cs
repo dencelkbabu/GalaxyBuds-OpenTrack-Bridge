@@ -166,7 +166,7 @@ public class MainWindow : Window
     private async Task RunRealModeAsync()
     {
         _coordinateMapper = new CoordinateMapper();
-        _udpSender = new OpenTrackUdpSender(targetHz: 100);
+        _udpSender = new OpenTrackUdpSender(targetHz: 200);
         _bluetoothManager = new BluetoothHeadTrackingManager();
         
         _bluetoothManager.Connected += (s, e) => 
