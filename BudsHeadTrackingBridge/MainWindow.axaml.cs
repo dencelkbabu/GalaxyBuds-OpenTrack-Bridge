@@ -33,7 +33,6 @@ public class MainWindow : Window
         
         // Deep dark background
         Background = new SolidColorBrush(Color.Parse("#121212"));
-        // Semi-transparent acrylic-like effect if supported? (Keeping simple for now)
         
         // Header
         var headerPanel = new StackPanel { Margin = new Thickness(0, 20, 0, 20) };
@@ -56,23 +55,24 @@ public class MainWindow : Window
         headerPanel.Children.Add(titleText);
         headerPanel.Children.Add(subtitleText);
 
-        // Create console output TextBlock
         _consoleOutput = new TextBlock
         {
             FontFamily = new FontFamily("Consolas,Courier New,monospace"),
             FontSize = 13,
             Foreground = new SolidColorBrush(Color.Parse("#00FF00")), // Terminal green
             TextWrapping = TextWrapping.Wrap,
-            Margin = new Thickness(10)
+            Margin = new Thickness(5),
+            VerticalAlignment = VerticalAlignment.Top
         };
         
-        // Console container with border
         _consoleScrollViewer = new ScrollViewer 
         { 
             Content = _consoleOutput,
-            VerticalScrollBarVisibility = ScrollBarVisibility.Auto
+            VerticalScrollBarVisibility = ScrollBarVisibility.Visible, // Force scrollbar to be visible
+            HorizontalScrollBarVisibility = ScrollBarVisibility.Disabled
         };
 
+        // Console container with border
         var consoleBorder = new Border
         {
             Background = new SolidColorBrush(Color.Parse("#000000")),
@@ -83,15 +83,10 @@ public class MainWindow : Window
             Padding = new Thickness(5),
             Child = _consoleScrollViewer
         };
-
+        
         // Action Buttons (Recenter, Clear, Quit)
         var recenterButton = CreateStyledButton("Recenter (R)", "#6200EE", 150);
-        recenterButton.Click += (s, e) => {
-             // We need current quaternion for recenter, which handles in background usually.
-             // But pressing 'R' just sets a flag. We can simulate the key press or duplicate logic.
-             // Simulating keypress is messy. Let's extract method.
-             RequestRecenter();
-        };
+        recenterButton.Click += (s, e) => RequestRecenter();
 
         var clearButton = CreateStyledButton("Clear (C)", "#B00020", 150);
         clearButton.Click += (s, e) => {
@@ -102,7 +97,7 @@ public class MainWindow : Window
         var quitButton = CreateStyledButton("Quit (Q)", "#333333", 150);
         quitButton.Click += (s, e) => Close();
 
-        var actionPanel = new StackPanel
+        _actionPanel = new StackPanel
         {
             Orientation = Orientation.Horizontal,
             HorizontalAlignment = HorizontalAlignment.Center,
@@ -111,9 +106,8 @@ public class MainWindow : Window
             Children = { recenterButton, clearButton, quitButton },
             IsVisible = false // Hidden initially, shown when running
         };
-        _actionPanel = actionPanel;
 
-        // Buttons
+        // Mode Buttons
         var realModeButton = CreateStyledButton("Start Real Mode (Galaxy Buds)", "#3700B3"); // Deep Purple
         realModeButton.Click += async (s, e) => await StartRealMode();
         
@@ -136,7 +130,7 @@ public class MainWindow : Window
         var topContainer = new StackPanel();
         topContainer.Children.Add(headerPanel);
         topContainer.Children.Add(_buttonPanel);
-        topContainer.Children.Add(actionPanel); // Add action buttons here
+        topContainer.Children.Add(_actionPanel); // Add action buttons here
         
         DockPanel.SetDock(topContainer, Dock.Top);
         mainPanel.Children.Add(topContainer);
@@ -236,15 +230,11 @@ public class MainWindow : Window
     {
         Dispatcher.UIThread.Post(() =>
         {
-            _consoleText.AppendLine(text);
-            _consoleOutput.Text = _consoleText.ToString();
-            
-            // Post moving to end to allow layout cycle to complete and update extent
-            // We use a lower priority to ensure the UI update has processed
-            Dispatcher.UIThread.Post(() => 
-            {
-                _consoleScrollViewer.ScrollToEnd();
-            }, DispatcherPriority.Background);
+             _consoleText.Append(text);
+             _consoleOutput.Text = _consoleText.ToString();
+             
+             // Auto-scroll disabled by user request
+             // _consoleScrollViewer.ScrollToEnd();
         });
     }
 
@@ -388,7 +378,7 @@ public class WindowConsoleWriter : System.IO.TextWriter
     public override void WriteLine(string? value)
     {
         _originalOut.WriteLine(value);
-        _window.AppendText(value ?? string.Empty);
+        _window.AppendText((value ?? string.Empty) + Environment.NewLine);
     }
 
     public override void Write(string? value)

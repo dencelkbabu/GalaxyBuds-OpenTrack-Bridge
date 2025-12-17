@@ -1,13 +1,15 @@
 using Avalonia;
 using Avalonia.Controls.ApplicationLifetimes;
 
+using Avalonia.Themes.Fluent;
+
 namespace BudsHeadTrackingBridge;
 
 public class App : Application
 {
     public override void Initialize()
     {
-        // No XAML for App class
+        Styles.Add(new FluentTheme());
     }
 
     public override void OnFrameworkInitializationCompleted()
