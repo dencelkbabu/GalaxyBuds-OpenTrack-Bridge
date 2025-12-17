@@ -16,10 +16,26 @@ public class CoordinateMapper
     /// </summary>
     public HeadPose QuaternionToHeadPose(Quaternion quaternion)
     {
+        // Safety check
+        if (float.IsNaN(quaternion.W) || float.IsNaN(quaternion.X) || 
+            float.IsNaN(quaternion.Y) || float.IsNaN(quaternion.Z))
+        {
+            return new HeadPose(0, 0, 0, DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+        }
+
         // Apply re-centering if calibrated
-        var adjustedQuaternion = _isCalibrated && _referenceQuaternion.HasValue
-            ? Quaternion.Inverse(_referenceQuaternion.Value) * quaternion
-            : quaternion;
+        Quaternion adjustedQuaternion;
+        if (_isCalibrated && _referenceQuaternion.HasValue)
+        {
+            // Use Conjugate instead of Inverse for performance/stability on normalized quats
+            // Diff = Ref* * Cur
+            var invRef = Quaternion.Conjugate(_referenceQuaternion.Value);
+            adjustedQuaternion = invRef * quaternion;
+        }
+        else
+        {
+            adjustedQuaternion = quaternion;
+        }
 
         // Convert to Euler angles (radians)
         var (roll, pitch, yaw) = adjustedQuaternion.ToRollPitchYaw();
@@ -36,8 +52,11 @@ public class CoordinateMapper
         // We swap them here to correct it.
         
         var mappedYaw = rollDeg;      // Was yawDeg
-        var mappedPitch = -pitchDeg;  // Inverted for OpenTrack (kept same)
+        var mappedPitch = -pitchDeg;  // Inverted for OpenTrack
         var mappedRoll = yawDeg;      // Was rollDeg
+
+        // Debug logging (only enabled if console allocated)
+        // Console.WriteLine($"[TRACE] Raw: {quaternion} | Adj: {adjustedQuaternion} | YPR: {mappedYaw:F0},{mappedPitch:F0},{mappedRoll:F0}");
 
         return new HeadPose(
             mappedYaw,
@@ -52,9 +71,18 @@ public class CoordinateMapper
     /// </summary>
     public void Recenter(Quaternion currentQuaternion)
     {
-        _referenceQuaternion = currentQuaternion;
+        // Ensure we capture a valid, normalized quaternion
+        if (currentQuaternion.LengthSquared() < 0.001f) return;
+
+        _referenceQuaternion = Quaternion.Normalize(currentQuaternion);
         _isCalibrated = true;
-        Console.WriteLine("[INFO] Re-centered head tracking");
+        
+        Console.WriteLine($"[INFO] Re-centered. Ref: {_referenceQuaternion}");
+        
+        // Verify immediate result
+        var verify = Quaternion.Conjugate(_referenceQuaternion.Value) * _referenceQuaternion.Value;
+        var (r, p, y) = verify.ToRollPitchYaw();
+        Console.WriteLine($"[DEBUG] Zero Check: {r},{p},{y} (Should be 0,0,0)");
     }
 
     /// <summary>
