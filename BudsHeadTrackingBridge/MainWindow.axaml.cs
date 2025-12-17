@@ -88,6 +88,11 @@ public class MainWindow : Window
         var recenterButton = CreateStyledButton("Recenter (R)", "#6200EE", 150);
         recenterButton.Click += (s, e) => RequestRecenter();
 
+        var cycleButton = CreateStyledButton("Cycle Axis (M)", "#018786", 150);
+        cycleButton.Click += (s, e) => {
+            _coordinateMapper?.CycleMapping();
+        };
+
         var clearButton = CreateStyledButton("Clear (C)", "#B00020", 150);
         clearButton.Click += (s, e) => {
              _coordinateMapper?.ClearRecenter();
@@ -103,7 +108,7 @@ public class MainWindow : Window
             HorizontalAlignment = HorizontalAlignment.Center,
             Margin = new Thickness(0, 0, 0, 10),
             Spacing = 10,
-            Children = { recenterButton, clearButton, quitButton },
+            Children = { recenterButton, cycleButton, clearButton, quitButton },
             IsVisible = false // Hidden initially, shown when running
         };
 
@@ -186,6 +191,9 @@ public class MainWindow : Window
             case Avalonia.Input.Key.C:
                 _coordinateMapper?.ClearRecenter();
                 Console.WriteLine("[COMMAND] Cleared recenter calibration");
+                break;
+            case Avalonia.Input.Key.M:
+                _coordinateMapper?.CycleMapping();
                 break;
             case Avalonia.Input.Key.Q:
                 Close();
@@ -379,7 +387,11 @@ public class WindowConsoleWriter : System.IO.TextWriter
     public override void WriteLine(string? value)
     {
         _originalOut.WriteLine(value);
-        _window.AppendText((value ?? string.Empty) + Environment.NewLine);
+        // Performance optimization: Don't print high-frequency TRACE/DEBUG logs to the UI window, only to the console
+        if (value != null && !value.Contains("[TRACE]") && !value.Contains("[DEBUG]"))
+        {
+            _window.AppendText(value + Environment.NewLine);
+        }
     }
 
     public override void Write(string? value)
