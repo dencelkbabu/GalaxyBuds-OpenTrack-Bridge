@@ -151,6 +151,12 @@ public class MainWindow : Window
         {
             _consoleText.AppendLine(text);
             _consoleOutput.Text = _consoleText.ToString();
+            
+            // Auto-scroll logic
+            if (_consoleOutput.Parent is ScrollViewer sv)
+            {
+                sv.ScrollToEnd();
+            }
         });
     }
 
