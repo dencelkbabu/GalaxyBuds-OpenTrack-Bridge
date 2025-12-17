@@ -31,10 +31,13 @@ public class CoordinateMapper
 
         // Apply coordinate system mapping
         // Galaxy Buds → OpenTrack coordinate transformation
-        // Based on testing, we may need to invert pitch
-        var mappedYaw = yawDeg;
-        var mappedPitch = -pitchDeg;  // Inverted for OpenTrack
-        var mappedRoll = rollDeg;
+        // User report: Left/Right (Yaw) movement changes Roll value.
+        // This implies the sensor axis for Roll corresponds to physical Yaw.
+        // We swap them here to correct it.
+        
+        var mappedYaw = rollDeg;      // Was yawDeg
+        var mappedPitch = -pitchDeg;  // Inverted for OpenTrack (kept same)
+        var mappedRoll = yawDeg;      // Was rollDeg
 
         return new HeadPose(
             mappedYaw,
