@@ -28,6 +28,22 @@ async Task RunRealModeAsync()
 {
     Console.WriteLine("\n[INFO] Starting in REAL MODE with Galaxy Buds\n");
     
+    // CRITICAL: Initialize Windows Bluetooth backend
+    // Without this, PlatformImpl uses DummyPlatformImplCreator which doesn't support Bluetooth
+    try
+    {
+        Console.WriteLine("[INFO] Initializing Windows Bluetooth backend...");
+        GalaxyBudsClient.Platform.PlatformImpl.SwitchWindowsBackend();
+        Console.WriteLine("[SUCCESS] Bluetooth backend initialized");
+    }
+    catch (Exception ex)
+    {
+        Console.WriteLine($"[ERROR] Failed to initialize Bluetooth backend: {ex.Message}");
+        Console.WriteLine("[INFO] Falling back to test mode...");
+        await RunTestModeAsync();
+        return;
+    }
+    
     // Initialize components
     var coordinateMapper = new CoordinateMapper();
     var udpSender = new OpenTrackUdpSender(targetHz: 100);
