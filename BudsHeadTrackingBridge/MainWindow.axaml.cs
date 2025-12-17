@@ -203,13 +203,19 @@ public class MainWindow : Window
         {
             _sentCount++;
             
-            if (_sentCount % 100 == 0)
+            if (_sentCount == 1 || _sentCount % 10 == 0)
             {
                 var elapsed = (DateTime.UtcNow - _lastStatsTime).TotalSeconds;
+                // Avoid division by zero on the very first packet if it's too fast, or just accept infinity
                 if (elapsed > 0)
                 {
-                   var hz = 100.0 / elapsed;
+                   var hz = _sentCount == 1 ? 0 : 10.0 / elapsed; 
+                   // If it's the first packet, we can't really calculate Hz from the block
                    AppendText($"[DEBUG] {headPose} | Rate: {hz:F1} Hz | Sent: {_sentCount}");
+                }
+                else
+                {
+                    AppendText($"[DEBUG] {headPose} | Sent: {_sentCount}");
                 }
                 _lastStatsTime = DateTime.UtcNow;
             }
