@@ -1,0 +1,64 @@
+name: Build and Release
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'  # Triggers on version tags like v1.0.0, v1.0-beta, etc.
+
+jobs:
+  build:
+    runs-on: windows-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        submodules: recursive
+    
+    - name: Setup .NET
+      uses: actions/setup-dotnet@v4
+      with:
+        dotnet-version: '10.0.x'
+    
+    - name: Restore dependencies
+      run: dotnet restore BudsHeadTrackingBridge/BudsHeadTrackingBridge.csproj
+    
+    - name: Build
+      run: dotnet publish BudsHeadTrackingBridge/BudsHeadTrackingBridge.csproj -c Release --self-contained -r win-x64 -p:PublishSingleFile=true -p:IncludeNativeLibrariesForSelfExtract=true
+    
+    - name: Prepare release folder
+      run: |
+        New-Item -ItemType Directory -Force -Path release
+        Copy-Item "BudsHeadTrackingBridge\bin\Release\net10.0-windows10.0.19041\win-x64\publish\BudsHeadTrackingBridge.exe" "release\"
+        Copy-Item "README.md" "release\"
+        Copy-Item "LICENSE" "release\"
+    
+    - name: Create ZIP
+      run: Compress-Archive -Path "release\*" -DestinationPath "BudsHeadTrackingBridge-${{ github.ref_name }}-win-x64.zip"
+    
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      with:
+        files: BudsHeadTrackingBridge-${{ github.ref_name }}-win-x64.zip
+        body: |
+          ## Galaxy Buds Head-Tracking Bridge ${{ github.ref_name }}
+          
+          ### Installation
+          1. Download the ZIP file below
+          2. Extract to a folder
+          3. Run `BudsHeadTrackingBridge.exe`
+          
+          ### Requirements
+          - Galaxy Buds Pro/Buds2 Pro/Buds3 Pro
+          - Windows 11 with Bluetooth
+          - OpenTrack
+          - GalaxyBudsClient (for initial pairing)
+          
+          **Note**: This is a standalone executable (~285MB). No .NET installation required!
+          
+          ### What's New
+          See [README.md](https://github.com/${{ github.repository }}/blob/${{ github.ref_name }}/README.md#changelog) for changelog.
+        draft: false
+        prerelease: ${{ contains(github.ref_name, 'beta') || contains(github.ref_name, 'alpha') }}
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
