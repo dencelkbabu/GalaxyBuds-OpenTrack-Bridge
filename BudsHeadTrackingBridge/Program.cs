@@ -8,7 +8,6 @@ Console.WriteLine("  [TEST MODE - Mock Data]");
 Console.WriteLine("===========================================\n");
 
 // Initialize components
-var coordinateMapper = new CoordinateMapper();
 var udpSender = new OpenTrackUdpSender(targetHz: 100);
 
 // Statistics
@@ -24,7 +23,6 @@ Console.WriteLine("  'q' - Quit\n");
 
 // Simulate head movement with a simple pattern
 var angle = 0.0f;
-var lastQuaternion = Quaternion.Identity;
 
 try
 {
@@ -35,16 +33,17 @@ try
     {
         while (!cts.Token.IsCancellationRequested)
         {
-            // Generate mock quaternion (simple rotation around Y axis - yaw)
+            // Generate mock head pose directly (simple yaw rotation)
             angle += 0.5f; // Degrees per update
             if (angle > 360) angle -= 360;
             
-            var radians = angle * (float)Math.PI / 180.0f;
-            var quaternion = Quaternion.CreateFromYawPitchRoll(radians, 0, 0);
-            lastQuaternion = quaternion;
-            
-            // Convert to head pose
-            var headPose = coordinateMapper.QuaternionToHeadPose(quaternion);
+            // Create head pose directly - pure yaw rotation
+            var headPose = new HeadPose(
+                yaw: angle,      // Rotating yaw from 0 to 360
+                pitch: 0.0f,     // No pitch movement
+                roll: 0.0f,      // No roll movement
+                timestamp: DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+            );
             
             // Send to OpenTrack (throttled)
             if (udpSender.SendPose(headPose))
@@ -76,12 +75,12 @@ try
             {
                 case 'r':
                 case 'R':
-                    coordinateMapper.Recenter(lastQuaternion);
+                    Console.WriteLine("[INFO] Recenter not applicable in test mode (no quaternions)");
                     break;
                     
                 case 'c':
                 case 'C':
-                    coordinateMapper.ClearRecenter();
+                    Console.WriteLine("[INFO] Clear recenter not applicable in test mode");
                     break;
                     
                 case 'q':
