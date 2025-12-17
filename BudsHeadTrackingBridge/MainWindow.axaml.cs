@@ -228,13 +228,14 @@ public class MainWindow : Window
 
     public void AppendText(string text)
     {
-        Dispatcher.UIThread.Post(() =>
+        Dispatcher.UIThread.Post(async () =>
         {
              _consoleText.Append(text);
              _consoleOutput.Text = _consoleText.ToString();
              
-             // Auto-scroll disabled by user request
-             // _consoleScrollViewer.ScrollToEnd();
+             // Wait for layout update to ensure correct scrolling
+             await Dispatcher.UIThread.InvokeAsync(() => {}, DispatcherPriority.Background);
+             _consoleScrollViewer.ScrollToEnd();
         });
     }
 
