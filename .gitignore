@@ -91,3 +91,7 @@ GalaxyBudsClient-master/
 ## Logs
 *.log
 logs/
+
+## Release builds
+release/
+*.zip
