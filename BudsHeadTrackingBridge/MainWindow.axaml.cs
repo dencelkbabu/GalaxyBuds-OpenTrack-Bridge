@@ -160,7 +160,11 @@ public class MainWindow : Window
         _udpSender = new OpenTrackUdpSender(targetHz: 100);
         _bluetoothManager = new BluetoothHeadTrackingManager();
         
-        _bluetoothManager.Connected += (s, e) => AppendText("[SUCCESS] Connected to Galaxy Buds!");
+        _bluetoothManager.Connected += (s, e) => 
+        {
+            AppendText("[SUCCESS] Connected to Galaxy Buds!");
+            _bluetoothManager.StartHeadTracking();
+        };
         _bluetoothManager.Disconnected += (s, reason) => AppendText($"[INFO] Disconnected: {reason}");
         _bluetoothManager.Error += (s, msg) => AppendText($"[ERROR] {msg}");
         
@@ -169,8 +173,6 @@ public class MainWindow : Window
         AppendText("[INFO] Initializing connection...");
         if (await _bluetoothManager.ConnectAsync())
         {
-            _bluetoothManager.StartHeadTracking();
-            
             // Keep alive check loop
             while (_isRunning && _bluetoothManager.IsConnected)
             {
