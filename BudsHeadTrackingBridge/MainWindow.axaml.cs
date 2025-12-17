@@ -1,5 +1,6 @@
 using Avalonia;
 using Avalonia.Controls;
+using Avalonia.Controls.Primitives;
 using Avalonia.Interactivity;
 using Avalonia.Layout;
 using Avalonia.Media;
@@ -66,6 +67,12 @@ public class MainWindow : Window
         };
         
         // Console container with border
+        _consoleScrollViewer = new ScrollViewer 
+        { 
+            Content = _consoleOutput,
+            VerticalScrollBarVisibility = ScrollBarVisibility.Auto
+        };
+
         var consoleBorder = new Border
         {
             Background = new SolidColorBrush(Color.Parse("#000000")),
@@ -74,8 +81,37 @@ public class MainWindow : Window
             CornerRadius = new CornerRadius(5),
             Margin = new Thickness(20, 0, 20, 20),
             Padding = new Thickness(5),
-            Child = new ScrollViewer { Content = _consoleOutput }
+            Child = _consoleScrollViewer
         };
+
+        // Action Buttons (Recenter, Clear, Quit)
+        var recenterButton = CreateStyledButton("Recenter (R)", "#6200EE", 150);
+        recenterButton.Click += (s, e) => {
+             // We need current quaternion for recenter, which handles in background usually.
+             // But pressing 'R' just sets a flag. We can simulate the key press or duplicate logic.
+             // Simulating keypress is messy. Let's extract method.
+             RequestRecenter();
+        };
+
+        var clearButton = CreateStyledButton("Clear (C)", "#B00020", 150);
+        clearButton.Click += (s, e) => {
+             _coordinateMapper?.ClearRecenter();
+             Console.WriteLine("[COMMAND] Cleared recenter calibration");
+        };
+
+        var quitButton = CreateStyledButton("Quit (Q)", "#333333", 150);
+        quitButton.Click += (s, e) => Close();
+
+        var actionPanel = new StackPanel
+        {
+            Orientation = Orientation.Horizontal,
+            HorizontalAlignment = HorizontalAlignment.Center,
+            Margin = new Thickness(0, 0, 0, 10),
+            Spacing = 10,
+            Children = { recenterButton, clearButton, quitButton },
+            IsVisible = false // Hidden initially, shown when running
+        };
+        _actionPanel = actionPanel;
 
         // Buttons
         var realModeButton = CreateStyledButton("Start Real Mode (Galaxy Buds)", "#3700B3"); // Deep Purple
@@ -100,6 +136,7 @@ public class MainWindow : Window
         var topContainer = new StackPanel();
         topContainer.Children.Add(headerPanel);
         topContainer.Children.Add(_buttonPanel);
+        topContainer.Children.Add(actionPanel); // Add action buttons here
         
         DockPanel.SetDock(topContainer, Dock.Top);
         mainPanel.Children.Add(topContainer);
@@ -117,12 +154,15 @@ public class MainWindow : Window
         KeyDown += OnKeyDown;
     }
 
-    private Button CreateStyledButton(string content, string colorHex)
+    private ScrollViewer _consoleScrollViewer;
+    private StackPanel _actionPanel;
+
+    private Button CreateStyledButton(string content, string colorHex, double width = 250)
     {
         return new Button
         {
             Content = content,
-            Width = 250,
+            Width = width,
             Height = 45,
             HorizontalContentAlignment = HorizontalAlignment.Center,
             VerticalContentAlignment = VerticalAlignment.Center,
@@ -131,8 +171,13 @@ public class MainWindow : Window
             Background = new SolidColorBrush(Color.Parse(colorHex)),
             Foreground = new SolidColorBrush(Colors.White),
             CornerRadius = new CornerRadius(8),
-            // Padding = new Thickness(10) // Button padding is handled by content alignment usually
         };
+    }
+
+    private void RequestRecenter()
+    {
+        Console.WriteLine("[COMMAND] Requesting Recenter (will apply on next packet)");
+        _pendingRecenter = true;
     }
 
     private void OnKeyDown(object? sender, Avalonia.Input.KeyEventArgs e)
@@ -142,9 +187,7 @@ public class MainWindow : Window
         switch (e.Key)
         {
             case Avalonia.Input.Key.R:
-                _coordinateMapper?.Recenter(System.Numerics.Quaternion.Identity); // We need the current quaternion, handled in logic
-                Console.WriteLine("[COMMAND] Requesting Recenter (will apply on next packet)");
-                _pendingRecenter = true;
+                RequestRecenter();
                 break;
             case Avalonia.Input.Key.C:
                 _coordinateMapper?.ClearRecenter();
@@ -172,6 +215,7 @@ public class MainWindow : Window
         if (_isRunning) return;
         _isRunning = true;
         _buttonPanel.IsVisible = false;
+        _actionPanel.IsVisible = true; // Show actions
         
         Console.WriteLine("[INFO] Starting in REAL MODE with Galaxy Buds\n");
         await RunRealModeAsync();
@@ -182,6 +226,7 @@ public class MainWindow : Window
         if (_isRunning) return;
         _isRunning = true;
         _buttonPanel.IsVisible = false;
+        _actionPanel.IsVisible = true; // Show actions
         
         Console.WriteLine("[INFO] Starting in TEST MODE (mock data)\n");
         await RunTestModeAsync();
@@ -195,12 +240,10 @@ public class MainWindow : Window
             _consoleOutput.Text = _consoleText.ToString();
             
             // Post moving to end to allow layout cycle to complete and update extent
+            // We use a lower priority to ensure the UI update has processed
             Dispatcher.UIThread.Post(() => 
             {
-                if (_consoleOutput.Parent is ScrollViewer sv)
-                {
-                    sv.ScrollToEnd();
-                }
+                _consoleScrollViewer.ScrollToEnd();
             }, DispatcherPriority.Background);
         });
     }
