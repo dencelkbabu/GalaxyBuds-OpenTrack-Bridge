@@ -313,13 +313,35 @@ public class MainWindow : Window
         }
     }
     
-    protected override void OnClosed(EventArgs e)
+    protected override async void OnClosing(WindowClosingEventArgs e)
     {
-        _isRunning = false;
-        _bluetoothManager?.Dispose();
-        _udpSender?.Dispose();
-        base.OnClosed(e);
+        // Prevent default close to allow async cleanup
+        if (_bluetoothManager != null && !_isShuttingDown)
+        {
+            e.Cancel = true;
+            _isShuttingDown = true;
+            
+            Console.WriteLine("[INFO] Shutting down...");
+            _isRunning = false;
+            
+            // Properly disconnect before disposing
+            await _bluetoothManager.DisconnectAsync();
+            _bluetoothManager.Dispose();
+            _bluetoothManager = null;
+            
+            _udpSender?.Dispose();
+            _udpSender = null;
+            
+            Console.WriteLine("[INFO] Cleanup complete");
+            
+            // Now actually close
+            Close();
+        }
+        
+        base.OnClosing(e);
     }
+    
+    private bool _isShuttingDown = false;
 
     private async Task RunTestModeAsync()
     {
