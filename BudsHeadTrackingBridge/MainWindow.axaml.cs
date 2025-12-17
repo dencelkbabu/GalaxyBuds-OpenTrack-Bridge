@@ -27,57 +27,83 @@ public class MainWindow : Window
     public MainWindow()
     {
         Title = "Galaxy Buds Head-Tracking Bridge";
-        Width = 800;
-        Height = 600;
-        Background = new SolidColorBrush(Color.Parse("#1E1E1E"));
+        Width = 900;
+        Height = 700;
         
+        // Deep dark background
+        Background = new SolidColorBrush(Color.Parse("#121212"));
+        // Semi-transparent acrylic-like effect if supported? (Keeping simple for now)
+        
+        // Header
+        var headerPanel = new StackPanel { Margin = new Thickness(0, 20, 0, 20) };
+        var titleText = new TextBlock
+        {
+            Text = "Galaxy Buds Bridge",
+            FontSize = 24,
+            FontWeight = FontWeight.Bold,
+            Foreground = new SolidColorBrush(Color.Parse("#FFFFFF")),
+            HorizontalAlignment = HorizontalAlignment.Center
+        };
+        var subtitleText = new TextBlock
+        {
+            Text = "Head Tracking for OpenTrack / ETS2 / ATS",
+            FontSize = 14,
+            Foreground = new SolidColorBrush(Color.Parse("#AAAAAA")),
+            HorizontalAlignment = HorizontalAlignment.Center,
+            Margin = new Thickness(0, 5, 0, 0)
+        };
+        headerPanel.Children.Add(titleText);
+        headerPanel.Children.Add(subtitleText);
+
         // Create console output TextBlock
         _consoleOutput = new TextBlock
         {
-            Margin = new Thickness(10),
             FontFamily = new FontFamily("Consolas,Courier New,monospace"),
-            FontSize = 12,
-            Foreground = new SolidColorBrush(Color.Parse("#D4D4D4")),
-            TextWrapping = TextWrapping.Wrap
-        };
-        
-        // Create mode selection buttons
-        var realModeButton = new Button
-        {
-            Content = "Real Galaxy Buds Mode",
-            Width = 200,
-            Height = 40,
+            FontSize = 13,
+            Foreground = new SolidColorBrush(Color.Parse("#00FF00")), // Terminal green
+            TextWrapping = TextWrapping.Wrap,
             Margin = new Thickness(10)
         };
+        
+        // Console container with border
+        var consoleBorder = new Border
+        {
+            Background = new SolidColorBrush(Color.Parse("#000000")),
+            BorderBrush = new SolidColorBrush(Color.Parse("#333333")),
+            BorderThickness = new Thickness(1),
+            CornerRadius = new CornerRadius(5),
+            Margin = new Thickness(20, 0, 20, 20),
+            Padding = new Thickness(5),
+            Child = new ScrollViewer { Content = _consoleOutput }
+        };
+
+        // Buttons
+        var realModeButton = CreateStyledButton("Start Real Mode (Galaxy Buds)", "#3700B3"); // Deep Purple
         realModeButton.Click += async (s, e) => await StartRealMode();
         
-        var testModeButton = new Button
-        {
-            Content = "Test Mode (Mock Data)",
-            Width = 200,
-            Height = 40,
-            Margin = new Thickness(10)
-        };
+        var testModeButton = CreateStyledButton("Start Test Mode (Simulation)", "#03DAC6");  // Teal
+        testModeButton.Foreground = new SolidColorBrush(Color.Parse("#000000")); // Dark text on teal
         testModeButton.Click += async (s, e) => await StartTestMode();
         
         _buttonPanel = new StackPanel
         {
             Orientation = Orientation.Horizontal,
             HorizontalAlignment = HorizontalAlignment.Center,
-            Margin = new Thickness(10),
+            Margin = new Thickness(0, 0, 0, 20),
+            Spacing = 20,
             Children = { realModeButton, testModeButton }
         };
         
-        // Layout
+        // Main Layout
         var mainPanel = new DockPanel();
-        DockPanel.SetDock(_buttonPanel, Dock.Top);
-        mainPanel.Children.Add(_buttonPanel);
         
-        var scrollViewer = new ScrollViewer
-        {
-            Content = _consoleOutput
-        };
-        mainPanel.Children.Add(scrollViewer);
+        var topContainer = new StackPanel();
+        topContainer.Children.Add(headerPanel);
+        topContainer.Children.Add(_buttonPanel);
+        
+        DockPanel.SetDock(topContainer, Dock.Top);
+        mainPanel.Children.Add(topContainer);
+        mainPanel.Children.Add(consoleBorder); // Fills remaining space
         
         Content = mainPanel;
         
@@ -86,11 +112,27 @@ public class MainWindow : Window
         var writer = new WindowConsoleWriter(this, originalOut);
         Console.SetOut(writer);
         
-        // Show welcome message
+        // Events
         Loaded += OnLoaded;
-        
-        // Handle keyboard input for commands
         KeyDown += OnKeyDown;
+    }
+
+    private Button CreateStyledButton(string content, string colorHex)
+    {
+        return new Button
+        {
+            Content = content,
+            Width = 250,
+            Height = 45,
+            HorizontalContentAlignment = HorizontalAlignment.Center,
+            VerticalContentAlignment = VerticalAlignment.Center,
+            FontSize = 14,
+            FontWeight = FontWeight.SemiBold,
+            Background = new SolidColorBrush(Color.Parse(colorHex)),
+            Foreground = new SolidColorBrush(Colors.White),
+            CornerRadius = new CornerRadius(8),
+            // Padding = new Thickness(10) // Button padding is handled by content alignment usually
+        };
     }
 
     private void OnKeyDown(object? sender, Avalonia.Input.KeyEventArgs e)
