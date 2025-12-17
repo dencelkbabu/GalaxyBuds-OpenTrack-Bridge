@@ -4,12 +4,16 @@ A lightweight C# bridge that extracts real-time head-tracking data from Samsung 
 
 ## Features
 
-- ✅ Real-time quaternion data extraction from Galaxy Buds Pro
-- ✅ Automatic conversion to Euler angles (Yaw/Pitch/Roll)
-- ✅ UDP streaming to OpenTrack at ~100-120 Hz
-- ✅ Coordinate system mapping (Buds → OpenTrack)
-- ✅ Optional re-centering support
-- ✅ Low latency (<50ms)
+- ✅ **Real-time head tracking** from Galaxy Buds Pro/Buds2 Pro/Buds3 Pro
+- ✅ **Modern GUI interface** with Avalonia UI
+- ✅ **Two coordinate mapping modes**:
+  - Mode 1 (Standard): Yaw/Roll swapped - optimized for Galaxy Buds orientation
+  - Mode 2 (Direct): No axis swapping - alternative mapping
+- ✅ **Recenter functionality** - set current position as zero point
+- ✅ **UDP streaming to OpenTrack** at ~100-120 Hz
+- ✅ **Test mode** - simulate head tracking without hardware
+- ✅ **Low latency** (<50ms)
+- ✅ **Proper cleanup** - no hanging on quit
 
 ## Requirements
 
@@ -18,9 +22,10 @@ A lightweight C# bridge that extracts real-time head-tracking data from Samsung 
 - Windows 11 PC with Bluetooth
 
 ### Software
-- **.NET 10.0 SDK** - [Download](https://dotnet.microsoft.com/download/dotnet/10.0)
 - **OpenTrack** - [Download](https://github.com/opentrack/opentrack/releases)
 - **GalaxyBudsClient** (for initial device pairing) - [Download](https://github.com/timschneeb/GalaxyBudsClient/releases)
+
+> **Note**: The application is a standalone executable (~300MB). No .NET installation required!
 
 ## Setup
 
@@ -30,11 +35,10 @@ A lightweight C# bridge that extracts real-time head-tracking data from Samsung 
 3. Open GalaxyBudsClient and connect to your buds (this registers the device)
 4. Verify audio is working
 
-### 2. Build the Bridge
-```bash
-cd d:\software_dev\budspro-headtracking-port
-dotnet build BudsHeadTrackingBridge/BudsHeadTrackingBridge.csproj
-```
+### 2. Download the Bridge
+Download the latest release from [GitHub Releases](https://github.com/YOUR_USERNAME/budspro-headtracking-port/releases)
+
+Extract the ZIP file to a folder of your choice.
 
 ### 3. Configure OpenTrack
 1. Install and launch OpenTrack
@@ -44,12 +48,13 @@ dotnet build BudsHeadTrackingBridge/BudsHeadTrackingBridge.csproj
 5. Click **Start**
 
 ### 4. Run the Bridge
-```bash
-cd BudsHeadTrackingBridge
-dotnet run
-```
+Double-click `BudsHeadTrackingBridge.exe` from the extracted folder.
 
-Expected output:
+A GUI window will appear with two mode options:
+- **Start Real Mode (Galaxy Buds)** - Connect to your Galaxy Buds
+- **Start Test Mode (Simulation)** - Test without hardware
+
+Expected console output:
 ```
 ===========================================
   Galaxy Buds Head-Tracking Bridge v1.0
@@ -60,7 +65,6 @@ Expected output:
 [SUCCESS] Connected to: Galaxy Buds Pro
 [INFO] Starting head-tracking mode...
 [SUCCESS] Head-tracking active!
-[INFO] Sending data to OpenTrack on UDP 127.0.0.1:4242
 ```
 
 ### 5. Test in Game
@@ -71,10 +75,29 @@ Expected output:
 
 ## Usage
 
-### Commands (while running)
-- `r` - Recenter head position
-- `c` - Clear recenter calibration
-- `q` - Quit
+### GUI Controls
+- **Recenter (R)** - Set current head position as the new zero point
+- **Cycle Axis (M)** - Switch between Mode 1 (Standard) and Mode 2 (Direct)
+- **Clear (C)** - Remove recenter calibration and return to absolute tracking
+- **Quit (Q)** - Exit application
+
+### Keyboard Shortcuts
+- `R` - Recenter head position
+- `M` - Cycle between mapping modes
+- `C` - Clear recenter calibration
+- `Q` - Quit
+
+### Coordinate Mapping Modes
+
+**Mode 1: Standard (Default)**
+- Swaps Yaw ↔ Roll axes
+- Optimized for Galaxy Buds IMU orientation
+- Use this mode for normal operation
+
+**Mode 2: Direct**
+- No axis swapping
+- Alternative mapping for troubleshooting
+- Switch with `M` key or "Cycle Axis" button
 
 ### Performance Monitoring
 The bridge displays statistics every 100 packets:
@@ -100,15 +123,15 @@ ETS2 / ATS / Flight Sims
 
 ```
 BudsHeadTrackingBridge/
-├── Program.cs                 # Main entry point
-├── HeadPose.cs               # Head orientation data structure
-├── MathExtensions.cs         # Quaternion → Euler conversion
-├── CoordinateMapper.cs       # Buds → OpenTrack coordinate mapping
-├── OpenTrackUdpSender.cs     # UDP sender with throttling
-└── GalaxyBudsClient/         # Minimal required source files
-    ├── Constants.cs          # Message IDs and enums
-    ├── SpatialSensorManager.cs
-    └── SpatialAudioDataDecoder.cs
+├── Program.cs                        # Main entry point
+├── MainWindow.axaml                  # GUI layout
+├── MainWindow.axaml.cs               # GUI logic and event handlers
+├── HeadPose.cs                       # Head orientation data structure
+├── MathExtensions.cs                 # Quaternion → Euler conversion
+├── CoordinateMapper.cs               # Coordinate mapping with 2 modes
+├── OpenTrackUdpSender.cs             # UDP sender with throttling
+├── BluetoothHeadTrackingManager.cs   # Bluetooth connection manager
+└── (Uses GalaxyBudsClient libraries) # Spatial sensor integration
 ```
 
 ## Troubleshooting
@@ -135,11 +158,20 @@ BudsHeadTrackingBridge/
 ## Technical Details
 
 ### Coordinate System Mapping
+
+**Mode 1 (Standard - Default)**
 | Axis | Galaxy Buds | OpenTrack |
 |------|-------------|-----------|
-| Yaw | Direct | Direct |
-| Pitch | Direct | Inverted (-1×) |
-| Roll | Direct | Direct |
+| Yaw | Roll | Yaw |
+| Pitch | Pitch | -Pitch |
+| Roll | Yaw | Roll |
+
+**Mode 2 (Direct)**
+| Axis | Galaxy Buds | OpenTrack |
+|------|-------------|-----------|
+| Yaw | Yaw | Yaw |
+| Pitch | Pitch | -Pitch |
+| Roll | Roll | Roll |
 
 ### Update Rate
 - **Target**: 100-120 Hz
@@ -165,6 +197,16 @@ This project was vibe coded using **Antigravity** powered by **Gemini 3 Pro** an
 
 This project uses components from GalaxyBudsClient (GPLv3). See individual source files for attribution.
 
+## Changelog
+
+### v1.0-beta (2025-12-17)
+- ✅ Modern Avalonia UI with dark theme
+- ✅ Simplified to 2 coordinate mapping modes (removed broken modes 1-5)
+- ✅ Fixed app hang on quit with proper async cleanup
+- ✅ Recenter and Clear functionality with GUI buttons
+- ✅ Test mode for simulation without hardware
+- ✅ Real-time debug output in console window
+
 ## Future Enhancements
 
 - [ ] Drift compensation (Madgwick/Mahony filters)
@@ -173,4 +215,4 @@ This project uses components from GalaxyBudsClient (GPLv3). See individual sourc
 - [ ] OpenXR output for VR mods
 - [ ] System tray icon for easy control
 - [ ] Auto-reconnect on Bluetooth disconnect
-- [ ] Configuration file for axis mapping/sensitivity
+- [ ] Configuration file for sensitivity tuning
