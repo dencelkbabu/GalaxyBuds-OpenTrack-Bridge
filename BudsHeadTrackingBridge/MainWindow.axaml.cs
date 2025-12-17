@@ -16,6 +16,13 @@ public class MainWindow : Window
     private readonly TextBlock _consoleOutput;
     private readonly StackPanel _buttonPanel;
     private bool _isRunning = false;
+    
+    // Real mode components
+    private BluetoothHeadTrackingManager? _bluetoothManager;
+    private CoordinateMapper? _coordinateMapper;
+    private OpenTrackUdpSender? _udpSender;
+    private DateTime _lastStatsTime;
+    private int _sentCount;
 
     public MainWindow()
     {
@@ -80,7 +87,33 @@ public class MainWindow : Window
         
         // Show welcome message
         Loaded += OnLoaded;
+        
+        // Handle keyboard input for commands
+        KeyDown += OnKeyDown;
     }
+
+    private void OnKeyDown(object? sender, Avalonia.Input.KeyEventArgs e)
+    {
+        if (!_isRunning) return;
+        
+        switch (e.Key)
+        {
+            case Avalonia.Input.Key.R:
+                _coordinateMapper?.Recenter(System.Numerics.Quaternion.Identity); // We need the current quaternion, handled in logic
+                AppendText("[COMMAND] Requesting Recenter (will apply on next packet)");
+                _pendingRecenter = true;
+                break;
+            case Avalonia.Input.Key.C:
+                _coordinateMapper?.ClearRecenter();
+                AppendText("[COMMAND] Cleared recenter calibration");
+                break;
+            case Avalonia.Input.Key.Q:
+                Close();
+                break;
+        }
+    }
+
+    private bool _pendingRecenter = false;
 
     private void OnLoaded(object? sender, RoutedEventArgs e)
     {
@@ -122,10 +155,70 @@ public class MainWindow : Window
 
     private async Task RunRealModeAsync()
     {
-        // TODO: Implement real Galaxy Buds mode
-        Console.WriteLine("[INFO] Real mode not yet implemented in GUI version");
-        Console.WriteLine("[INFO] Falling back to test mode...\n");
-        await RunTestModeAsync();
+        _coordinateMapper = new CoordinateMapper();
+        _udpSender = new OpenTrackUdpSender(targetHz: 100);
+        _bluetoothManager = new BluetoothHeadTrackingManager();
+        
+        _bluetoothManager.Connected += (s, e) => AppendText("[SUCCESS] Connected to Galaxy Buds!");
+        _bluetoothManager.Disconnected += (s, reason) => AppendText($"[INFO] Disconnected: {reason}");
+        _bluetoothManager.Error += (s, msg) => AppendText($"[ERROR] {msg}");
+        
+        _bluetoothManager.QuaternionReceived += OnQuaternionReceived;
+        
+        AppendText("[INFO] Initializing connection...");
+        if (await _bluetoothManager.ConnectAsync())
+        {
+            _bluetoothManager.StartHeadTracking();
+            
+            // Keep alive check loop
+            while (_isRunning && _bluetoothManager.IsConnected)
+            {
+                await Task.Delay(1000);
+            }
+        }
+        else
+        {
+            AppendText("[ERROR] Failed to connect. Please check if GalaxyBudsClient is installed and buds are paired.");
+            _isRunning = false;
+        }
+    }
+
+    private void OnQuaternionReceived(object? sender, System.Numerics.Quaternion q)
+    {
+        if (_coordinateMapper == null || _udpSender == null) return;
+
+        // Handle pending recenter
+        if (_pendingRecenter)
+        {
+           _coordinateMapper.Recenter(q);
+           _pendingRecenter = false;
+        }
+
+        var headPose = _coordinateMapper.QuaternionToHeadPose(q);
+        
+        if (_udpSender.SendPose(headPose))
+        {
+            _sentCount++;
+            
+            if (_sentCount % 100 == 0)
+            {
+                var elapsed = (DateTime.UtcNow - _lastStatsTime).TotalSeconds;
+                if (elapsed > 0)
+                {
+                   var hz = 100.0 / elapsed;
+                   AppendText($"[DEBUG] {headPose} | Rate: {hz:F1} Hz | Sent: {_sentCount}");
+                }
+                _lastStatsTime = DateTime.UtcNow;
+            }
+        }
+    }
+    
+    protected override void OnClosed(EventArgs e)
+    {
+        _isRunning = false;
+        _bluetoothManager?.Dispose();
+        _udpSender?.Dispose();
+        base.OnClosed(e);
     }
 
     private async Task RunTestModeAsync()
