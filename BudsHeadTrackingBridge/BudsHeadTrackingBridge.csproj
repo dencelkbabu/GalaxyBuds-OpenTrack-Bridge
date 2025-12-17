@@ -1,8 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\GalaxyBudsClient-master\GalaxyBudsClient.Platform\GalaxyBudsClient.Platform.csproj" />
-    <ProjectReference Include="..\GalaxyBudsClient-master\GalaxyBudsClient.Platform.Windows\GalaxyBudsClient.Platform.Windows.csproj" />
+    <ProjectReference Include="..\GalaxyBudsClient\GalaxyBudsClient\GalaxyBudsClient.csproj" />
+    <ProjectReference Include="..\GalaxyBudsClient\GalaxyBudsClient.Platform\GalaxyBudsClient.Platform.csproj" />
+    <ProjectReference Include="..\GalaxyBudsClient\GalaxyBudsClient.Platform.Windows\GalaxyBudsClient.Platform.Windows.csproj" />
   </ItemGroup>
 
   <ItemGroup>
