@@ -101,12 +101,12 @@ public class MainWindow : Window
         {
             case Avalonia.Input.Key.R:
                 _coordinateMapper?.Recenter(System.Numerics.Quaternion.Identity); // We need the current quaternion, handled in logic
-                AppendText("[COMMAND] Requesting Recenter (will apply on next packet)");
+                Console.WriteLine("[COMMAND] Requesting Recenter (will apply on next packet)");
                 _pendingRecenter = true;
                 break;
             case Avalonia.Input.Key.C:
                 _coordinateMapper?.ClearRecenter();
-                AppendText("[COMMAND] Cleared recenter calibration");
+                Console.WriteLine("[COMMAND] Cleared recenter calibration");
                 break;
             case Avalonia.Input.Key.Q:
                 Close();
@@ -162,15 +162,15 @@ public class MainWindow : Window
         
         _bluetoothManager.Connected += (s, e) => 
         {
-            AppendText("[SUCCESS] Connected to Galaxy Buds!");
+            Console.WriteLine("[SUCCESS] Connected to Galaxy Buds!");
             _bluetoothManager.StartHeadTracking();
         };
-        _bluetoothManager.Disconnected += (s, reason) => AppendText($"[INFO] Disconnected: {reason}");
-        _bluetoothManager.Error += (s, msg) => AppendText($"[ERROR] {msg}");
+        _bluetoothManager.Disconnected += (s, reason) => Console.WriteLine($"[INFO] Disconnected: {reason}");
+        _bluetoothManager.Error += (s, msg) => Console.WriteLine($"[ERROR] {msg}");
         
         _bluetoothManager.QuaternionReceived += OnQuaternionReceived;
         
-        AppendText("[INFO] Initializing connection...");
+        Console.WriteLine("[INFO] Initializing connection...");
         if (await _bluetoothManager.ConnectAsync())
         {
             // Keep alive check loop
@@ -181,7 +181,7 @@ public class MainWindow : Window
         }
         else
         {
-            AppendText("[ERROR] Failed to connect. Please check if GalaxyBudsClient is installed and buds are paired.");
+            Console.WriteLine("[ERROR] Failed to connect. Please check if GalaxyBudsClient is installed and buds are paired.");
             _isRunning = false;
         }
     }
@@ -206,16 +206,14 @@ public class MainWindow : Window
             if (_sentCount == 1 || _sentCount % 10 == 0)
             {
                 var elapsed = (DateTime.UtcNow - _lastStatsTime).TotalSeconds;
-                // Avoid division by zero on the very first packet if it's too fast, or just accept infinity
                 if (elapsed > 0)
                 {
                    var hz = _sentCount == 1 ? 0 : 10.0 / elapsed; 
-                   // If it's the first packet, we can't really calculate Hz from the block
-                   AppendText($"[DEBUG] {headPose} | Rate: {hz:F1} Hz | Sent: {_sentCount}");
+                   Console.WriteLine($"[DEBUG] {headPose} | Rate: {hz:F1} Hz | Sent: {_sentCount}");
                 }
                 else
                 {
-                    AppendText($"[DEBUG] {headPose} | Sent: {_sentCount}");
+                    Console.WriteLine($"[DEBUG] {headPose} | Sent: {_sentCount}");
                 }
                 _lastStatsTime = DateTime.UtcNow;
             }
